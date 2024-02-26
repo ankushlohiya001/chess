@@ -42,7 +42,12 @@ fn setup(
 
         commands.spawn(MaterialMesh2dBundle {
             mesh: shape,
-            material: materials.add(ColorMaterial { color, texture: () }).into(),
+            material: materials
+                .add(ColorMaterial {
+                    color,
+                    texture: None,
+                })
+                .into(),
             transform: Transform::from_xyz(
                 // Distribute shapes from -X_EXTENT to +X_EXTENT.
                 -X_EXTENT / 2. + i as f32 / (num_shapes - 1) as f32 * X_EXTENT,
