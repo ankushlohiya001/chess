@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::{input::keyboard, prelude::*};
+use bevy::{animation::RepeatAnimation, input::keyboard, prelude::*, transform};
 
 fn main() {
     App::new()
@@ -8,7 +8,7 @@ fn main() {
         // .init_gizmo_group::<MyRoundGizmos>()
         .add_systems(Startup, setup)
         .add_systems(Update, transform_cube)
-        // .add_systems(Update, (draw_example_collection, update_config))
+        .add_systems(Update, rotate_camera)
         .run();
 }
 //
@@ -18,11 +18,19 @@ fn main() {
 #[derive(Component)]
 struct Docker;
 
+#[derive(Resource)]
+struct Animation(Vec<Handle<AnimationClip>>);
+
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: ResMut<AssetServer>,
 ) {
+    commands.insert_resource(Animation(vec![
+        asset_server.load("assets/char_walk.glb#Animation0")
+    ]));
+
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 1.5, 6.).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
@@ -34,12 +42,20 @@ fn setup(
         ..default()
     });
     // cube
+    // commands.spawn((
+    //     Docker,
+    //     PbrBundle {
+    //         mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+    //         material: materials.add(Color::rgb(0.8, 0.7, 0.6)),
+    //         transform: Transform::from_xyz(2.5, 0.5, 0.0),
+    //         ..default()
+    //     },
+    // ));
     commands.spawn((
         Docker,
-        PbrBundle {
-            mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
-            material: materials.add(Color::rgb(0.8, 0.7, 0.6)),
-            transform: Transform::from_xyz(2.5, 0.5, 0.0),
+        SceneBundle {
+            scene: asset_server.load("character.glb#Scene0"),
+            transform: Transform::from_scale(Vec3::new(0.01, -0.01, 0.01)),
             ..default()
         },
     ));
@@ -78,13 +94,34 @@ fn setup(
     // );
 }
 
-fn transform_cube(mut query: Query<&mut Transform, With<Docker>>, time: Res<Time>) {
+fn transform_cube(
+    mut query: Query<&mut Transform, With<Docker>>,
+    time: Res<Time>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
     // for mut transform in &mut query {
     //     transform.rotate_y(time.delta_seconds() / 2.);
     //     // transform.rotate_around(Vec3::ZERO, Quat::from_rotation_y(time.delta_seconds() / 2.));
     // }
+
     let mut elem = query.single_mut();
-    elem.rotate_z(time.delta_seconds());
+    // elem.rotate_z(time.delta_seconds());
+    if keyboard.pressed(KeyCode::KeyW) {
+        let forward = elem.forward();
+        elem.translation += forward * time.delta_seconds();
+    }
+    if keyboard.pressed(KeyCode::KeyS) {
+        let forward = elem.back();
+        elem.translation += forward * time.delta_seconds();
+    }
+
+    if keyboard.pressed(KeyCode::KeyA) {
+        elem.rotate_y(time.delta_seconds());
+    }
+
+    if keyboard.pressed(KeyCode::KeyD) {
+        elem.rotate_y(time.delta_seconds() * -1.);
+    }
 }
 
 fn rotate_camera(
@@ -94,10 +131,12 @@ fn rotate_camera(
 ) {
     let mut transform = query.single_mut();
 
-    if keyboard.pressed(KeyCode::ArrowLeft) {
-        transform.rotate_around(Vec3::ZERO, Quat::from_rotation_y(time.delta_seconds() / 2.));
-    }
-
+    // if keyboard.pressed(KeyCode::ArrowLeft) {
+    //     // transform.rotate_around(Vec3::ZERO, Quat::from_rotation_y(time.delta_seconds() / 2.));
+    //     let forward = transform.forward();
+    //     transform.translation += forward * time.delta_seconds();
+    // }
+    //
     if keyboard.pressed(KeyCode::ArrowRight) {
         transform.rotate_around(
             Vec3::ZERO,
